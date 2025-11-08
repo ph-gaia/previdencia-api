@@ -14,6 +14,29 @@ API em NestJS voltada para gestão de saldos e solicitações de resgate de plan
 - TypeScript, ESLint (PSR-like), Prettier
 - Docker e Docker Compose para orquestração local
 
+## Arquitetura
+
+- **Camada de domínio (`src/domain`)**: implementa regras de negócio puras, seguindo DDD e Clean Architecture. É independente de NestJS, banco ou qualquer framework. Todos os componentes podem ser testados isoladamente.
+- **Camadas de aplicação e infraestrutura**: serão construídas em etapas posteriores (controllers, módulos NestJS, adapters de persistência etc.), consumindo apenas interfaces expostas pelo domínio.
+- **Princípios**: entidades expõem comportamentos e invariantes, objetos de valor encapsulam conceitos imutáveis, serviços de domínio orquestram regras envolvendo múltiplas entidades, repositórios são definidos por contratos.
+
+## Domínio
+
+- **Objetos de valor**
+  - `Money`: representa valores monetários com precisão de duas casas e operações seguras (`add`, `subtract`, comparações).
+  - `CarencyDate`: encapsula a data de carência, garantindo validade e permitindo verificar se a contribuição já está disponível.
+- **Entidades**
+  - `Contribution`: guarda valor aportado, data e carência, calculando automaticamente o montante disponível considerando a carência.
+  - `User`: mantém dados cadastrais e o conjunto de contribuições pertencentes ao participante.
+  - `WithdrawalRequest`: modela pedidos de resgate total ou parcial, validando tipo e valor solicitado.
+- **Serviços de domínio**
+  - `BalanceCalculatorService`: soma saldos totais e disponíveis com base nas contribuições.
+  - `WithdrawalValidatorService`: valida solicitações de resgate, garantindo que as contribuições pertençam ao usuário e que haja saldo disponível.
+- **Exceções**
+  - `InsufficientBalanceException`: lançada quando o saldo disponível não cobre o resgate solicitado.
+  - `InvalidWithdrawalException`: representa violações de regras de negócio em pedidos de resgate.
+- **Repositórios (interfaces)**: `UserRepository` e `ContributionRepository` definem os contratos de persistência que serão implementados na infraestrutura.
+
 ## Pré-requisitos
 
 - Node.js 20 e npm 10 (ou superior)
