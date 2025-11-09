@@ -18,7 +18,9 @@ export class RequestWithdrawalUseCase
     private readonly balanceCalculator: BalanceCalculatorService = new BalanceCalculatorService(),
   ) {}
 
-  async execute(input: RequestWithdrawalInputDto): Promise<WithdrawalResponseDto> {
+  async execute(
+    input: RequestWithdrawalInputDto,
+  ): Promise<WithdrawalResponseDto> {
     this.ensureUserId(input.userId);
 
     const user = await this.userRepository.findById(input.userId);
@@ -26,7 +28,9 @@ export class RequestWithdrawalUseCase
       throw new Error('User not found');
     }
 
-    const contributions = await this.contributionRepository.findByUserId(user.getId());
+    const contributions = await this.contributionRepository.findByUserId(
+      user.getId(),
+    );
     const requestedAt = this.parseDateOrNow(input.requestedAt, 'requestedAt');
     const requestedAmount = this.toMoneyOrUndefined(input.requestedAmount);
 
@@ -39,9 +43,17 @@ export class RequestWithdrawalUseCase
       notes: input.notes,
     });
 
-    const approvedAmount = this.withdrawalValidator.validate(withdrawalRequest, contributions, requestedAt);
-    const balanceSummary = this.balanceCalculator.calculateSummary(contributions, requestedAt);
-    const availableAfterRequest = balanceSummary.available.subtract(approvedAmount);
+    const approvedAmount = this.withdrawalValidator.validate(
+      withdrawalRequest,
+      contributions,
+      requestedAt,
+    );
+    const balanceSummary = this.balanceCalculator.calculateSummary(
+      contributions,
+      requestedAt,
+    );
+    const availableAfterRequest =
+      balanceSummary.available.subtract(approvedAmount);
 
     return {
       requestId: withdrawalRequest.getId(),
@@ -89,4 +101,3 @@ export class RequestWithdrawalUseCase
     return `wr_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
   }
 }
-

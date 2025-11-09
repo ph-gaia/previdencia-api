@@ -12,4 +12,3 @@ export interface GetBalanceOutputDto {
   total: number;
   available: number;
 }
-

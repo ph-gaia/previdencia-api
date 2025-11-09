@@ -9,4 +9,3 @@ export interface WithdrawalResponseDto {
   requestedAt: string;
   notes?: string;
 }
-

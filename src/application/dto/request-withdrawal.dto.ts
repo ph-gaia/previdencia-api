@@ -17,4 +17,3 @@ export interface RequestWithdrawalInputDto {
   requestedAt?: string;
   notes?: string;
 }
-

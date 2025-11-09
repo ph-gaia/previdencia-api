@@ -1,10 +1,15 @@
 import { IUseCase } from '../interfaces/i.use-case';
-import { GetBalanceInputDto, GetBalanceOutputDto } from '../dto/get-balance.dto';
+import {
+  GetBalanceInputDto,
+  GetBalanceOutputDto,
+} from '../dto/get-balance.dto';
 import { UserRepository } from '../../domain/repositories/user-repository.interface';
 import { ContributionRepository } from '../../domain/repositories/contribution-repository.interface';
 import { BalanceCalculatorService } from '../../domain/services/balance-calculator.service';
 
-export class GetBalanceUseCase implements IUseCase<GetBalanceInputDto, GetBalanceOutputDto> {
+export class GetBalanceUseCase
+  implements IUseCase<GetBalanceInputDto, GetBalanceOutputDto>
+{
   constructor(
     private readonly userRepository: UserRepository,
     private readonly contributionRepository: ContributionRepository,
@@ -19,9 +24,14 @@ export class GetBalanceUseCase implements IUseCase<GetBalanceInputDto, GetBalanc
       throw new Error('User not found');
     }
 
-    const contributions = await this.contributionRepository.findByUserId(user.getId());
+    const contributions = await this.contributionRepository.findByUserId(
+      user.getId(),
+    );
     const referenceDate = this.parseReferenceDate(input.referenceDate);
-    const balanceSummary = this.balanceCalculator.calculateSummary(contributions, referenceDate);
+    const balanceSummary = this.balanceCalculator.calculateSummary(
+      contributions,
+      referenceDate,
+    );
 
     return {
       userId: user.getId(),
@@ -49,4 +59,3 @@ export class GetBalanceUseCase implements IUseCase<GetBalanceInputDto, GetBalanc
     return parsed;
   }
 }
-
