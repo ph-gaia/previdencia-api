@@ -40,7 +40,9 @@ class InMemoryContributionRepository implements ContributionRepository {
   }
 
   async addMany(contributions: Contribution[]): Promise<void> {
-    await Promise.all(contributions.map((contribution) => this.save(contribution)));
+    await Promise.all(
+      contributions.map((contribution) => this.save(contribution)),
+    );
   }
 }
 
@@ -64,7 +66,9 @@ const createContribution = (
     userId,
     amount: new Money(amount),
     contributedAt: new Date(contributedAt),
-    carencyDate: carencyDate ? new CarencyDate(new Date(carencyDate)) : undefined,
+    carencyDate: carencyDate
+      ? new CarencyDate(new Date(carencyDate))
+      : undefined,
   });
 
 describe('GetBalanceUseCase', () => {
@@ -84,7 +88,13 @@ describe('GetBalanceUseCase', () => {
 
     const contributions = [
       createContribution('c1', user.getId(), 100, '2023-01-01T00:00:00.000Z'),
-      createContribution('c2', user.getId(), 200, '2023-01-01T00:00:00.000Z', '2025-01-01T00:00:00.000Z'),
+      createContribution(
+        'c2',
+        user.getId(),
+        200,
+        '2023-01-01T00:00:00.000Z',
+        '2025-01-01T00:00:00.000Z',
+      ),
     ];
     await contributionRepository.addMany(contributions);
 
@@ -118,4 +128,3 @@ describe('GetBalanceUseCase', () => {
     ).rejects.toThrow('Invalid reference date');
   });
 });
-
