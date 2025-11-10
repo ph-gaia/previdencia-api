@@ -7,4 +7,3 @@ export interface ContributionRepository {
   findByUserId(userId: string): Promise<Contribution[]>;
   save(contribution: Contribution): Promise<void>;
 }
-

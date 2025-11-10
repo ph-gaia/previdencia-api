@@ -9,4 +9,3 @@ export interface BalanceSummary {
   total: Money;
   available: Money;
 }
-

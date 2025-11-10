@@ -10,18 +10,24 @@ export class BalanceCalculatorService {
     );
   }
 
-  calculateAvailable(contributions: Contribution[], referenceDate: Date = new Date()): Money {
+  calculateAvailable(
+    contributions: Contribution[],
+    referenceDate: Date = new Date(),
+  ): Money {
     return contributions.reduce(
-      (available, contribution) => available.add(contribution.getAvailableAmount(referenceDate)),
+      (available, contribution) =>
+        available.add(contribution.getAvailableAmount(referenceDate)),
       Money.zero(),
     );
   }
 
-  calculateSummary(contributions: Contribution[], referenceDate: Date = new Date()): BalanceSummary {
+  calculateSummary(
+    contributions: Contribution[],
+    referenceDate: Date = new Date(),
+  ): BalanceSummary {
     const total = this.calculateTotal(contributions);
     const available = this.calculateAvailable(contributions, referenceDate);
 
     return { total, available };
   }
 }
-

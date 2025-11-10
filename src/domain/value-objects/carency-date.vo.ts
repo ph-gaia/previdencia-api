@@ -25,4 +25,3 @@ export class CarencyDate {
     return this.value.getTime() === other.value.getTime();
   }
 }
-

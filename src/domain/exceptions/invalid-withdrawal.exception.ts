@@ -4,4 +4,3 @@ export class InvalidWithdrawalException extends Error {
     this.name = 'InvalidWithdrawalException';
   }
 }
-

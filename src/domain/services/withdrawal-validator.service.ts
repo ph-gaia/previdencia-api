@@ -6,7 +6,9 @@ import { InvalidWithdrawalException } from '../exceptions/invalid-withdrawal.exc
 import { Money } from '../value-objects/money.vo';
 
 export class WithdrawalValidatorService {
-  constructor(private readonly balanceCalculator: BalanceCalculatorService = new BalanceCalculatorService()) {}
+  constructor(
+    private readonly balanceCalculator: BalanceCalculatorService = new BalanceCalculatorService(),
+  ) {}
 
   validate(
     request: WithdrawalRequest,
@@ -15,7 +17,10 @@ export class WithdrawalValidatorService {
   ): Money {
     this.assertContributionsBelongToUser(request, contributions);
 
-    const availableBalance = this.balanceCalculator.calculateAvailable(contributions, referenceDate);
+    const availableBalance = this.balanceCalculator.calculateAvailable(
+      contributions,
+      referenceDate,
+    );
 
     if (availableBalance.isZero()) {
       throw new InsufficientBalanceException();
@@ -27,11 +32,15 @@ export class WithdrawalValidatorService {
 
     const requestedAmount = request.getRequestedAmount();
     if (!requestedAmount) {
-      throw new InvalidWithdrawalException('Partial withdrawal must include a requested amount');
+      throw new InvalidWithdrawalException(
+        'Partial withdrawal must include a requested amount',
+      );
     }
 
     if (requestedAmount.greaterThan(availableBalance)) {
-      throw new InsufficientBalanceException('Requested amount exceeds available balance');
+      throw new InsufficientBalanceException(
+        'Requested amount exceeds available balance',
+      );
     }
 
     return requestedAmount;
@@ -46,8 +55,9 @@ export class WithdrawalValidatorService {
     );
 
     if (invalidContribution) {
-      throw new InvalidWithdrawalException('Contributions must belong to the requesting user');
+      throw new InvalidWithdrawalException(
+        'Contributions must belong to the requesting user',
+      );
     }
   }
 }
-

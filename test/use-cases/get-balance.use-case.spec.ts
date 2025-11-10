@@ -19,11 +19,12 @@ class InMemoryUserRepository implements UserRepository {
   }
 
   async findById(id: string): Promise<User | null> {
-    return this.users.get(id) ?? null;
+    return Promise.resolve(this.users.get(id) ?? null);
   }
 
   async save(user: User): Promise<void> {
     this.users.set(user.getId(), user);
+    return Promise.resolve();
   }
 }
 
@@ -31,17 +32,20 @@ class InMemoryContributionRepository implements ContributionRepository {
   private contributions = new Map<string, Contribution>();
 
   async findById(id: string): Promise<Contribution | null> {
-    return this.contributions.get(id) ?? null;
+    return Promise.resolve(this.contributions.get(id) ?? null);
   }
 
   async findByUserId(userId: string): Promise<Contribution[]> {
-    return Array.from(this.contributions.values()).filter(
-      (contribution) => contribution.getUserId() === userId,
+    return Promise.resolve(
+      Array.from(this.contributions.values()).filter(
+        (contribution) => contribution.getUserId() === userId,
+      ),
     );
   }
 
   async save(contribution: Contribution): Promise<void> {
     this.contributions.set(contribution.getId(), contribution);
+    return Promise.resolve();
   }
 
   async addMany(contributions: Contribution[]): Promise<void> {
@@ -57,11 +61,12 @@ class InMemoryUserBalanceProjectionRepository
   private balances = new Map<string, UserBalanceProjection>();
 
   async findByUserId(userId: string): Promise<UserBalanceProjection | null> {
-    return this.balances.get(userId) ?? null;
+    return Promise.resolve(this.balances.get(userId) ?? null);
   }
 
   async upsert(balance: UserBalanceProjection): Promise<void> {
     this.balances.set(balance.userId, balance);
+    return Promise.resolve();
   }
 }
 
