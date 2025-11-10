@@ -116,3 +116,56 @@ docker compose down
 
 - Modelagem das entidades de saldo e regras de carência.
 - Implementação dos endpoints de consulta e solicitação de resgate com validações de negócio.
+- Manutenção da projeção `user_balances` via CQRS para respostas rápidas ao chatbot.
+
+---
+
+## Modelagem atual
+
+### Banco relacional
+
+- `users`: cadastro básico do participante (identificação, dados pessoais).
+- `contributions`: aportes realizados, valor total, valor já resgatado (`redeemed_amount`), data de carência e timestamps.
+- `contribution_vestings`: curvas de liberação parcial por aporte (valor e data de liberação).
+- `withdrawals`: pedidos processados de resgate (total/parcial), valor solicitado/aprovado e situação.
+- `withdrawal_items`: relação entre um pedido processado e os aportes debitados, registrando o valor abatido por contribuição.
+- `user_balances`: projeção materializada contendo saldos total, disponível e bloqueado para consulta rápida.
+
+### Domínio
+
+- `Contribution`: agora rastreia quanto já foi resgatado, calculando automaticamente o saldo remanescente e disponível.
+- `BalanceCalculatorService`: soma saldos total/disponível a partir das contribuições (usado como fallback quando não há projeção).
+- `WithdrawalValidatorService`: valida pedidos contra as contribuições do usuário, tipos (TOTAL/PARCIAL) e carência.
+- `WithdrawalRequest`: entidade imutável utilizada na validação de resgates.
+
+### Camada de infraestrutura
+
+- **Repositórios TypeORM**: mapeiam `users`, `contributions`, `withdrawals` e derivadas.
+- **Serviço de persistência de resgates**: realiza o débito dos aportes, grava `withdrawals`/`withdrawal_items`, atualiza `redeemed_amount` e dispara o evento `WithdrawalProcessedEvent`.
+- **Projeção CQRS**: `UserBalanceProjector` reavalia o saldo consolidando aportes, vestings e resgates; o resultado é salvo em `user_balances`.
+
+---
+
+## Fluxos principais
+
+### Consulta de saldo
+
+1. O chatbot chama `GET /users/:userId/balance`.
+2. O controller valida parâmetros e delega ao `GetBalanceUseCase`.
+3. O use case busca a projeção em `user_balances` (se for consulta no tempo atual).  
+   - Caso não exista projeção ou a consulta seja para uma data histórica, recalcula em tempo real pelas contribuições.
+4. O resultado (total, disponível) é retornado ao chatbot.
+
+### Solicitação de resgate
+
+1. O chatbot envia `POST /users/:userId/withdrawals` com tipo (TOTAL/PARCIAL) e valor quando aplicável.
+2. O controller valida o payload e chama `RequestWithdrawalUseCase`.
+3. O use case:
+   - Valida o usuário, aportações e regras de carência via `WithdrawalValidatorService`.
+   - Calcula o saldo pós-resgate.
+   - Dispara o serviço de persistência para gravar o pedido e debitar as contribuições.
+4. O serviço de persistência atualiza `redeemed_amount` nos aportes, grava `withdrawals` + `withdrawal_items`, e publica `WithdrawalProcessedEvent`.
+5. O evento aciona o `UserBalanceProjector`, que recalcula `user_balances`, garantindo que futuras consultas reflitam o resgate.
+6. O use case responde ao chatbot com o valor aprovado e saldo disponível remanescente.
+
+---

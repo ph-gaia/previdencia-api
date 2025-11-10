@@ -27,6 +27,11 @@ import { UserBalanceProjector } from './application/projections/user-balance.pro
 import { RecalculateUserBalanceHandler } from './application/cqrs/handlers/recalculate-user-balance.handler';
 import { ContributionSavedEventHandler } from './application/cqrs/handlers/contribution-saved.handler';
 import { WithdrawalProcessedEventHandler } from './application/cqrs/handlers/withdrawal-processed.handler';
+import {
+  WITHDRAWAL_PERSISTENCE,
+  WithdrawalPersistencePort,
+} from './application/services/withdrawal-persistence.port';
+import { WithdrawalPersistenceService } from './infrastructure/services/withdrawal-persistence.service';
 
 const CQRS_COMMAND_HANDLERS: Provider[] = [RecalculateUserBalanceHandler];
 const CQRS_EVENT_HANDLERS: Provider[] = [
@@ -57,6 +62,11 @@ const CQRS_EVENT_HANDLERS: Provider[] = [
     UserTypeOrmRepository,
     ContributionTypeOrmRepository,
     UserBalanceTypeOrmRepository,
+    WithdrawalPersistenceService,
+    {
+      provide: WITHDRAWAL_PERSISTENCE,
+      useExisting: WithdrawalPersistenceService,
+    },
     BalanceCalculatorService,
     {
       provide: WithdrawalValidatorService,
@@ -94,18 +104,21 @@ const CQRS_EVENT_HANDLERS: Provider[] = [
         contributionRepository: ContributionRepository,
         withdrawalValidator: WithdrawalValidatorService,
         balanceCalculator: BalanceCalculatorService,
+        withdrawalPersistence: WithdrawalPersistencePort,
       ): RequestWithdrawalUseCase =>
         new RequestWithdrawalUseCase(
           userRepository,
           contributionRepository,
           withdrawalValidator,
           balanceCalculator,
+          withdrawalPersistence,
         ),
       inject: [
         USER_REPOSITORY,
         CONTRIBUTION_REPOSITORY,
         WithdrawalValidatorService,
         BalanceCalculatorService,
+        WITHDRAWAL_PERSISTENCE,
       ] as const,
     },
     UserBalanceProjector,

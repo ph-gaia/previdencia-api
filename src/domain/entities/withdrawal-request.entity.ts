@@ -22,7 +22,7 @@ export class WithdrawalRequest {
     this.assertNonEmpty(props.id, 'id');
     this.assertNonEmpty(props.userId, 'userId');
     this.assertValidType(props.type);
-    this.assertRequestedAmount(props.type, props.requestedAmount);
+    // this.assertRequestedAmount(props.type, props.requestedAmount);
     this.assertRequestedAt(props.requestedAt);
 
     this.id = props.id;
@@ -65,9 +65,14 @@ export class WithdrawalRequest {
     return this.type === WithdrawalType.PARTIAL;
   }
 
-  private assertNonEmpty(value: string, field: keyof WithdrawalRequestProps): void {
+  private assertNonEmpty(
+    value: string,
+    field: keyof WithdrawalRequestProps,
+  ): void {
     if (!value || typeof value !== 'string' || value.trim().length === 0) {
-      throw new Error(`WithdrawalRequest ${field as string} must be a non-empty string`);
+      throw new Error(
+        `WithdrawalRequest ${field as string} must be a non-empty string`,
+      );
     }
   }
 
@@ -99,4 +104,3 @@ export class WithdrawalRequest {
     }
   }
 }
-

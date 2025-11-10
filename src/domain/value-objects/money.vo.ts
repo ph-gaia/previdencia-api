@@ -57,4 +57,3 @@ export class Money {
     return this.value.toFixed(2);
   }
 }
-

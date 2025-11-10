@@ -7,6 +7,10 @@ import { WithdrawalValidatorService } from '../../domain/services/withdrawal-val
 import { BalanceCalculatorService } from '../../domain/services/balance-calculator.service';
 import { WithdrawalRequest } from '../../domain/entities/withdrawal-request.entity';
 import { Money } from '../../domain/value-objects/money.vo';
+import {
+  WithdrawalPersistencePort,
+  WithdrawalPersistenceInput,
+} from '../services/withdrawal-persistence.port';
 
 export class RequestWithdrawalUseCase
   implements IUseCase<RequestWithdrawalInputDto, WithdrawalResponseDto>
@@ -16,6 +20,7 @@ export class RequestWithdrawalUseCase
     private readonly contributionRepository: ContributionRepository,
     private readonly withdrawalValidator: WithdrawalValidatorService = new WithdrawalValidatorService(),
     private readonly balanceCalculator: BalanceCalculatorService = new BalanceCalculatorService(),
+    private readonly withdrawalPersistence?: WithdrawalPersistencePort,
   ) {}
 
   async execute(
@@ -54,6 +59,16 @@ export class RequestWithdrawalUseCase
     );
     const availableAfterRequest =
       balanceSummary.available.subtract(approvedAmount);
+
+    await this.persistWithdrawal({
+      withdrawalId: withdrawalRequest.getId(),
+      userId: withdrawalRequest.getUserId(),
+      type: withdrawalRequest.getType(),
+      approvedAmount: approvedAmount.amount,
+      requestedAmount: requestedAmount?.amount,
+      requestedAt,
+      notes: withdrawalRequest.getNotes(),
+    });
 
     return {
       requestId: withdrawalRequest.getId(),
@@ -99,5 +114,15 @@ export class RequestWithdrawalUseCase
 
   private generateRequestId(): string {
     return `wr_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  }
+
+  private async persistWithdrawal(
+    payload: WithdrawalPersistenceInput,
+  ): Promise<void> {
+    if (!this.withdrawalPersistence) {
+      return;
+    }
+
+    await this.withdrawalPersistence.process(payload);
   }
 }

@@ -14,6 +14,9 @@ export class ContributionMapper {
       carencyDate: entity.carencyDate
         ? new CarencyDate(new Date(entity.carencyDate.getTime()))
         : undefined,
+      redeemedAmount: new Money(
+        Number(entity.redeemedAmount !== undefined ? entity.redeemedAmount : 0),
+      ),
     });
   }
 
@@ -24,6 +27,7 @@ export class ContributionMapper {
     contribution.amount = entity.getAmount().amount;
     contribution.contributedAt = entity.getContributionDate();
     contribution.carencyDate = entity.getCarencyDate()?.date ?? null;
+    contribution.redeemedAmount = entity.getRedeemedAmount().amount;
     contribution.user = { id: entity.getUserId() } as UserOrmEntity;
 
     return contribution;

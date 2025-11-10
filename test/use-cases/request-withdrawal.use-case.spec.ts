@@ -8,6 +8,10 @@ import { CarencyDate } from '../../src/domain/value-objects/carency-date.vo';
 import { WithdrawalType } from '../../src/domain/domain.types';
 import { InsufficientBalanceException } from '../../src/domain/exceptions/insufficient-balance.exception';
 import { InvalidWithdrawalException } from '../../src/domain/exceptions/invalid-withdrawal.exception';
+import {
+  WithdrawalPersistenceInput,
+  WithdrawalPersistencePort,
+} from '../../src/application/services/withdrawal-persistence.port';
 
 class InMemoryUserRepository implements UserRepository {
   private users = new Map<string, User>();
@@ -17,11 +21,12 @@ class InMemoryUserRepository implements UserRepository {
   }
 
   async findById(id: string): Promise<User | null> {
-    return this.users.get(id) ?? null;
+    return Promise.resolve(this.users.get(id) ?? null);
   }
 
   async save(user: User): Promise<void> {
     this.users.set(user.getId(), user);
+    return Promise.resolve();
   }
 }
 
@@ -29,21 +34,35 @@ class InMemoryContributionRepository implements ContributionRepository {
   private contributions = new Map<string, Contribution>();
 
   async findById(id: string): Promise<Contribution | null> {
-    return this.contributions.get(id) ?? null;
+    return Promise.resolve(this.contributions.get(id) ?? null);
   }
 
   async findByUserId(userId: string): Promise<Contribution[]> {
-    return Array.from(this.contributions.values()).filter(
-      (contribution) => contribution.getUserId() === userId,
+    return Promise.resolve(
+      Array.from(this.contributions.values()).filter(
+        (contribution) => contribution.getUserId() === userId,
+      ),
     );
   }
 
   async save(contribution: Contribution): Promise<void> {
     this.contributions.set(contribution.getId(), contribution);
+    return Promise.resolve();
   }
 
   async addMany(contributions: Contribution[]): Promise<void> {
-    await Promise.all(contributions.map((contribution) => this.save(contribution)));
+    await Promise.all(
+      contributions.map((contribution) => this.save(contribution)),
+    );
+  }
+}
+
+class FakeWithdrawalPersistence implements WithdrawalPersistencePort {
+  public inputs: WithdrawalPersistenceInput[] = [];
+
+  async process(input: WithdrawalPersistenceInput): Promise<void> {
+    this.inputs.push(input);
+    return Promise.resolve();
   }
 }
 
@@ -67,18 +86,28 @@ const createContribution = (
     userId,
     amount: new Money(amount),
     contributedAt: new Date(contributedAt),
-    carencyDate: carencyDate ? new CarencyDate(new Date(carencyDate)) : undefined,
+    carencyDate: carencyDate
+      ? new CarencyDate(new Date(carencyDate))
+      : undefined,
   });
 
 describe('RequestWithdrawalUseCase', () => {
   let userRepository: InMemoryUserRepository;
   let contributionRepository: InMemoryContributionRepository;
+  let withdrawalPersistence: FakeWithdrawalPersistence;
   let useCase: RequestWithdrawalUseCase;
 
   beforeEach(() => {
     userRepository = new InMemoryUserRepository();
     contributionRepository = new InMemoryContributionRepository();
-    useCase = new RequestWithdrawalUseCase(userRepository, contributionRepository);
+    withdrawalPersistence = new FakeWithdrawalPersistence();
+    useCase = new RequestWithdrawalUseCase(
+      userRepository,
+      contributionRepository,
+      undefined,
+      undefined,
+      withdrawalPersistence,
+    );
   });
 
   it('aprova um resgate parcial e retorna saldo restante', async () => {
@@ -109,6 +138,14 @@ describe('RequestWithdrawalUseCase', () => {
       requestedAt: '2024-03-01T00:00:00.000Z',
       notes: 'partial withdrawal',
     });
+
+    expect(withdrawalPersistence.inputs).toHaveLength(1);
+    expect(withdrawalPersistence.inputs[0]).toMatchObject({
+      userId: user.getId(),
+      approvedAmount: 250,
+      requestedAmount: 250,
+      type: WithdrawalType.PARTIAL,
+    });
   });
 
   it('aprova um resgate total utilizando o saldo disponível', async () => {
@@ -123,6 +160,7 @@ describe('RequestWithdrawalUseCase', () => {
     const result = await useCase.execute({
       userId: user.getId(),
       type: WithdrawalType.TOTAL,
+      requestedAmount: 400,
       requestedAt: '2024-04-01T00:00:00.000Z',
     });
 
@@ -132,6 +170,13 @@ describe('RequestWithdrawalUseCase', () => {
     expect(result.availableBalanceAfterRequest).toBe(0);
     expect(result.requestedAt).toBe('2024-04-01T00:00:00.000Z');
     expect(result.requestId).toMatch(/^wr_/);
+
+    expect(withdrawalPersistence.inputs[0]).toMatchObject({
+      userId: user.getId(),
+      type: WithdrawalType.TOTAL,
+      approvedAmount: 400,
+      requestedAmount: 400,
+    });
   });
 
   it('lança erro quando o usuário não existe', async () => {
@@ -155,14 +200,17 @@ describe('RequestWithdrawalUseCase', () => {
     );
 
     const mismatchingContributionRepository: ContributionRepository = {
-      findById: async () => otherContribution,
-      findByUserId: async () => [otherContribution],
-      save: async () => undefined,
+      findById: () => Promise.resolve(otherContribution),
+      findByUserId: () => Promise.resolve([otherContribution]),
+      save: () => Promise.resolve(),
     };
 
     const useCaseWithInvalidData = new RequestWithdrawalUseCase(
       userRepository,
       mismatchingContributionRepository,
+      undefined,
+      undefined,
+      withdrawalPersistence,
     );
 
     await expect(
@@ -177,7 +225,12 @@ describe('RequestWithdrawalUseCase', () => {
     const user = createUser('user-1');
     userRepository.set(user);
 
-    const contribution = createContribution('c1', user.getId(), 100, '2023-01-01T00:00:00.000Z');
+    const contribution = createContribution(
+      'c1',
+      user.getId(),
+      100,
+      '2023-01-01T00:00:00.000Z',
+    );
     await contributionRepository.save(contribution);
 
     await expect(
@@ -189,4 +242,3 @@ describe('RequestWithdrawalUseCase', () => {
     ).rejects.toBeInstanceOf(InsufficientBalanceException);
   });
 });
-

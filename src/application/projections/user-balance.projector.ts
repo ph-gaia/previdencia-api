@@ -6,6 +6,7 @@ import type {
   UserBalanceProjectionRepository,
 } from '../../domain/repositories/user-balance-projection.repository';
 import { ContributionOrmEntity } from '../../infrastructure/database/entities/contribution.orm-entity';
+import { calculateContributionAvailability } from '../utils/contribution-availability.util';
 
 @Injectable()
 export class UserBalanceProjector {
@@ -52,57 +53,26 @@ export class UserBalanceProjector {
   > {
     let totalAmount = 0;
     let maturedTotal = 0;
-    let availableAmount = 0;
+    let availableAmountSum = 0;
 
     contributions.forEach((contribution) => {
-      const amount = this.round(Number(contribution.amount));
-      const redeemed = this.round(Number(contribution.redeemedAmount ?? 0));
-      const matured = this.computeMaturedAmount(contribution, referenceDate);
-
-      totalAmount += amount;
-      maturedTotal += matured;
-
-      const availableForContribution = Math.max(
-        0,
-        this.round(matured - redeemed),
+      const availability = calculateContributionAvailability(
+        contribution,
+        referenceDate,
       );
-      availableAmount += Math.min(
-        availableForContribution,
-        this.round(amount - redeemed),
-      );
+
+      totalAmount += availability.totalAmount;
+      maturedTotal += availability.maturedAmount;
+      availableAmountSum += availability.availableAmount;
     });
 
     const lockedAmount = Math.max(0, this.round(totalAmount - maturedTotal));
 
     return {
       totalAmount: this.round(totalAmount),
-      availableAmount: this.round(availableAmount),
+      availableAmount: this.round(availableAmountSum),
       lockedAmount: this.round(lockedAmount),
     };
-  }
-
-  private computeMaturedAmount(
-    contribution: ContributionOrmEntity,
-    referenceDate: Date,
-  ): number {
-    const amount = this.round(Number(contribution.amount));
-
-    if (contribution.vestings && contribution.vestings.length > 0) {
-      const maturedFromVestings = contribution.vestings
-        .filter((vesting) => vesting.releaseAt <= referenceDate)
-        .reduce((sum, vesting) => sum + Number(vesting.amount), 0);
-
-      return Math.min(amount, this.round(maturedFromVestings));
-    }
-
-    if (
-      !contribution.carencyDate ||
-      contribution.carencyDate <= referenceDate
-    ) {
-      return amount;
-    }
-
-    return 0;
   }
 
   private round(value: number): number {

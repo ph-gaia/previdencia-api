@@ -7,6 +7,7 @@ export interface ContributionProps {
   amount: Money;
   contributedAt: Date;
   carencyDate?: CarencyDate;
+  redeemedAmount?: Money;
 }
 
 export class Contribution {
@@ -15,18 +16,21 @@ export class Contribution {
   private readonly amount: Money;
   private readonly contributedAt: Date;
   private readonly carencyDate?: CarencyDate;
+  private readonly redeemedAmount: Money;
 
   constructor(props: ContributionProps) {
     this.assertValidId(props.id);
     this.assertValidId(props.userId, 'userId');
     this.assertValidContributionDate(props.contributedAt);
     this.assertValidCarencyDate(props.carencyDate, props.contributedAt);
+    this.assertValidRedeemedAmount(props.amount, props.redeemedAmount);
 
     this.id = props.id;
     this.userId = props.userId;
     this.amount = props.amount;
     this.contributedAt = new Date(props.contributedAt.getTime());
     this.carencyDate = props.carencyDate;
+    this.redeemedAmount = props.redeemedAmount ?? Money.zero();
   }
 
   getId(): string {
@@ -49,6 +53,18 @@ export class Contribution {
     return this.carencyDate;
   }
 
+  getRedeemedAmount(): Money {
+    return this.redeemedAmount;
+  }
+
+  getRemainingBalance(): Money {
+    if (this.redeemedAmount.greaterThan(this.amount)) {
+      return Money.zero();
+    }
+
+    return this.amount.subtract(this.redeemedAmount);
+  }
+
   isAvailable(referenceDate: Date = new Date()): boolean {
     if (!this.carencyDate) {
       return true;
@@ -59,7 +75,7 @@ export class Contribution {
 
   getAvailableAmount(referenceDate: Date = new Date()): Money {
     if (this.isAvailable(referenceDate)) {
-      return this.amount;
+      return this.getRemainingBalance();
     }
 
     return Money.zero();
@@ -92,5 +108,17 @@ export class Contribution {
       throw new Error('Carency date cannot be before the contribution date');
     }
   }
-}
 
+  private assertValidRedeemedAmount(
+    amount: Money,
+    redeemedAmount: Money | undefined,
+  ): void {
+    if (!redeemedAmount) {
+      return;
+    }
+
+    if (redeemedAmount.greaterThan(amount)) {
+      throw new Error('Redeemed amount cannot exceed contribution amount');
+    }
+  }
+}
