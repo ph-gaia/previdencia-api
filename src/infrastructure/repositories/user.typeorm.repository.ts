@@ -1,9 +1,11 @@
+import { Injectable } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { UserRepository } from '../../domain/repositories/user-repository.interface';
 import { User } from '../../domain/entities/user.entity';
 import { UserOrmEntity } from '../database/entities/user.orm-entity';
 import { UserMapper } from '../mappers/user.mapper';
 
+@Injectable()
 export class UserTypeOrmRepository implements UserRepository {
   private readonly repository: Repository<UserOrmEntity>;
 

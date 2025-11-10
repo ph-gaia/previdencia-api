@@ -1,4 +1,5 @@
-import { Module } from '@nestjs/common';
+import { Module, Provider } from '@nestjs/common';
+import { CqrsModule } from '@nestjs/cqrs';
 import { DataSource } from 'typeorm';
 import { BalanceController } from './presentation/controllers/balance.controller';
 import { WithdrawalController } from './presentation/controllers/withdrawal.controller';
@@ -17,36 +18,45 @@ import { GetBalanceUseCase } from './application/use-cases/get-balance.use-case'
 import { RequestWithdrawalUseCase } from './application/use-cases/request-withdrawal.use-case';
 import { BalanceCalculatorService } from './domain/services/balance-calculator.service';
 import { WithdrawalValidatorService } from './domain/services/withdrawal-validator.service';
+import {
+  USER_BALANCE_PROJECTION_REPOSITORY,
+  UserBalanceProjectionRepository,
+} from './domain/repositories/user-balance-projection.repository';
+import { UserBalanceTypeOrmRepository } from './infrastructure/repositories/user-balance.typeorm.repository';
+import { UserBalanceProjector } from './application/projections/user-balance.projector';
+import { RecalculateUserBalanceHandler } from './application/cqrs/handlers/recalculate-user-balance.handler';
+import { ContributionSavedEventHandler } from './application/cqrs/handlers/contribution-saved.handler';
+import { WithdrawalProcessedEventHandler } from './application/cqrs/handlers/withdrawal-processed.handler';
 
-const DATA_SOURCE = 'DATA_SOURCE';
+const CQRS_COMMAND_HANDLERS: Provider[] = [RecalculateUserBalanceHandler];
+const CQRS_EVENT_HANDLERS: Provider[] = [
+  ContributionSavedEventHandler,
+  WithdrawalProcessedEventHandler,
+];
 
 @Module({
+  imports: [CqrsModule],
   controllers: [BalanceController, WithdrawalController],
   providers: [
     {
-      provide: DATA_SOURCE,
-      useFactory: async (): Promise<DataSource> => initializeDataSource(),
-    },
-    {
-      provide: UserTypeOrmRepository,
-      useFactory: (dataSource: DataSource) =>
-        new UserTypeOrmRepository(dataSource),
-      inject: [DATA_SOURCE] as const,
+      provide: DataSource,
+      useFactory: (): Promise<DataSource> => initializeDataSource(),
     },
     {
       provide: USER_REPOSITORY,
       useExisting: UserTypeOrmRepository,
     },
     {
-      provide: ContributionTypeOrmRepository,
-      useFactory: (dataSource: DataSource) =>
-        new ContributionTypeOrmRepository(dataSource),
-      inject: [DATA_SOURCE] as const,
-    },
-    {
       provide: CONTRIBUTION_REPOSITORY,
       useExisting: ContributionTypeOrmRepository,
     },
+    {
+      provide: USER_BALANCE_PROJECTION_REPOSITORY,
+      useExisting: UserBalanceTypeOrmRepository,
+    },
+    UserTypeOrmRepository,
+    ContributionTypeOrmRepository,
+    UserBalanceTypeOrmRepository,
     BalanceCalculatorService,
     {
       provide: WithdrawalValidatorService,
@@ -62,16 +72,19 @@ const DATA_SOURCE = 'DATA_SOURCE';
         userRepository: UserRepository,
         contributionRepository: ContributionRepository,
         balanceCalculator: BalanceCalculatorService,
+        userBalanceProjectionRepository: UserBalanceProjectionRepository,
       ): GetBalanceUseCase =>
         new GetBalanceUseCase(
           userRepository,
           contributionRepository,
           balanceCalculator,
+          userBalanceProjectionRepository,
         ),
       inject: [
         USER_REPOSITORY,
         CONTRIBUTION_REPOSITORY,
         BalanceCalculatorService,
+        USER_BALANCE_PROJECTION_REPOSITORY,
       ] as const,
     },
     {
@@ -95,6 +108,9 @@ const DATA_SOURCE = 'DATA_SOURCE';
         BalanceCalculatorService,
       ] as const,
     },
+    UserBalanceProjector,
+    ...CQRS_COMMAND_HANDLERS,
+    ...CQRS_EVENT_HANDLERS,
   ],
 })
 export class AppModule {}

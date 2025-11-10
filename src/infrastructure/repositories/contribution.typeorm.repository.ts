@@ -1,13 +1,20 @@
+import { Injectable } from '@nestjs/common';
+import { EventBus } from '@nestjs/cqrs';
 import { DataSource, Repository } from 'typeorm';
 import { ContributionRepository } from '../../domain/repositories/contribution-repository.interface';
 import { Contribution } from '../../domain/entities/contribution.entity';
 import { ContributionOrmEntity } from '../database/entities/contribution.orm-entity';
 import { ContributionMapper } from '../mappers/contribution.mapper';
+import { ContributionSavedEvent } from '../../application/cqrs/events/contribution-saved.event';
 
+@Injectable()
 export class ContributionTypeOrmRepository implements ContributionRepository {
   private readonly repository: Repository<ContributionOrmEntity>;
 
-  constructor(private readonly dataSource: DataSource) {
+  constructor(
+    private readonly dataSource: DataSource,
+    private readonly eventBus: EventBus,
+  ) {
     this.repository = this.dataSource.getRepository(ContributionOrmEntity);
   }
 
@@ -38,5 +45,6 @@ export class ContributionTypeOrmRepository implements ContributionRepository {
     const persistenceContribution =
       ContributionMapper.toPersistence(contribution);
     await this.repository.save(persistenceContribution);
+    this.eventBus.publish(new ContributionSavedEvent(contribution.getUserId()));
   }
 }

@@ -1,10 +1,15 @@
 import { GetBalanceUseCase } from '../../src/application/use-cases/get-balance.use-case';
 import { UserRepository } from '../../src/domain/repositories/user-repository.interface';
 import { ContributionRepository } from '../../src/domain/repositories/contribution-repository.interface';
+import {
+  UserBalanceProjection,
+  UserBalanceProjectionRepository,
+} from '../../src/domain/repositories/user-balance-projection.repository';
 import { User } from '../../src/domain/entities/user.entity';
 import { Contribution } from '../../src/domain/entities/contribution.entity';
 import { Money } from '../../src/domain/value-objects/money.vo';
 import { CarencyDate } from '../../src/domain/value-objects/carency-date.vo';
+import { BalanceCalculatorService } from '../../src/domain/services/balance-calculator.service';
 
 class InMemoryUserRepository implements UserRepository {
   private users = new Map<string, User>();
@@ -46,6 +51,20 @@ class InMemoryContributionRepository implements ContributionRepository {
   }
 }
 
+class InMemoryUserBalanceProjectionRepository
+  implements UserBalanceProjectionRepository
+{
+  private balances = new Map<string, UserBalanceProjection>();
+
+  async findByUserId(userId: string): Promise<UserBalanceProjection | null> {
+    return this.balances.get(userId) ?? null;
+  }
+
+  async upsert(balance: UserBalanceProjection): Promise<void> {
+    this.balances.set(balance.userId, balance);
+  }
+}
+
 const createUser = (id: string): User =>
   new User({
     id,
@@ -74,12 +93,19 @@ const createContribution = (
 describe('GetBalanceUseCase', () => {
   let userRepository: InMemoryUserRepository;
   let contributionRepository: InMemoryContributionRepository;
+  let balanceProjectionRepository: InMemoryUserBalanceProjectionRepository;
   let useCase: GetBalanceUseCase;
 
   beforeEach(() => {
     userRepository = new InMemoryUserRepository();
     contributionRepository = new InMemoryContributionRepository();
-    useCase = new GetBalanceUseCase(userRepository, contributionRepository);
+    balanceProjectionRepository = new InMemoryUserBalanceProjectionRepository();
+    useCase = new GetBalanceUseCase(
+      userRepository,
+      contributionRepository,
+      new BalanceCalculatorService(),
+      balanceProjectionRepository,
+    );
   });
 
   it('retorna o saldo total e disponível do usuário', async () => {
