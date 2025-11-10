@@ -8,6 +8,7 @@ import { CarencyDate } from '../../src/domain/value-objects/carency-date.vo';
 import { WithdrawalType } from '../../src/domain/domain.types';
 import { InsufficientBalanceException } from '../../src/domain/exceptions/insufficient-balance.exception';
 import { InvalidWithdrawalException } from '../../src/domain/exceptions/invalid-withdrawal.exception';
+import { randomUUID } from 'crypto';
 import {
   WithdrawalPersistenceInput,
   WithdrawalPersistencePort,
@@ -120,17 +121,18 @@ describe('RequestWithdrawalUseCase', () => {
     ];
     await contributionRepository.addMany(contributions);
 
+    const customRequestId = randomUUID();
     const result = await useCase.execute({
       userId: user.getId(),
       type: WithdrawalType.PARTIAL,
       requestedAmount: 250,
-      requestId: 'req-123',
+      requestId: customRequestId,
       requestedAt: '2024-03-01T00:00:00.000Z',
       notes: 'partial withdrawal',
     });
 
     expect(result).toEqual({
-      requestId: 'req-123',
+      requestId: customRequestId,
       userId: user.getId(),
       type: WithdrawalType.PARTIAL,
       approvedAmount: 250,
@@ -141,6 +143,7 @@ describe('RequestWithdrawalUseCase', () => {
 
     expect(withdrawalPersistence.inputs).toHaveLength(1);
     expect(withdrawalPersistence.inputs[0]).toMatchObject({
+      withdrawalId: customRequestId,
       userId: user.getId(),
       approvedAmount: 250,
       requestedAmount: 250,
@@ -169,7 +172,9 @@ describe('RequestWithdrawalUseCase', () => {
     expect(result.approvedAmount).toBe(400);
     expect(result.availableBalanceAfterRequest).toBe(0);
     expect(result.requestedAt).toBe('2024-04-01T00:00:00.000Z');
-    expect(result.requestId).toMatch(/^wr_/);
+    expect(result.requestId).toMatch(
+      /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$/,
+    );
 
     expect(withdrawalPersistence.inputs[0]).toMatchObject({
       userId: user.getId(),

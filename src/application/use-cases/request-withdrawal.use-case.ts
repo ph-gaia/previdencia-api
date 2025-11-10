@@ -7,6 +7,7 @@ import { WithdrawalValidatorService } from '../../domain/services/withdrawal-val
 import { BalanceCalculatorService } from '../../domain/services/balance-calculator.service';
 import { WithdrawalRequest } from '../../domain/entities/withdrawal-request.entity';
 import { Money } from '../../domain/value-objects/money.vo';
+import { randomUUID } from 'crypto';
 import {
   WithdrawalPersistencePort,
   WithdrawalPersistenceInput,
@@ -113,7 +114,7 @@ export class RequestWithdrawalUseCase
   }
 
   private generateRequestId(): string {
-    return `wr_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    return randomUUID();
   }
 
   private async persistWithdrawal(
