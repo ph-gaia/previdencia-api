@@ -8,26 +8,30 @@ services:
         condition: service_healthy
       prometheus:
         condition: service_started
+    env_file:
+      - .env
     environment:
       NODE_ENV: production
-      PORT: 3000
-      DATABASE_HOST: db
-      DATABASE_PORT: 5432
-      DATABASE_USER: previdencia
-      DATABASE_PASSWORD: previdencia
-      DATABASE_NAME: previdencia
+      PORT: ${APP_PORT:-3000}
+      DATABASE_HOST: ${DATABASE_HOST:-db}
+      DATABASE_PORT: ${DATABASE_PORT:-5432}
+      DATABASE_USER: ${DATABASE_USER}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD}
+      DATABASE_NAME: ${DATABASE_NAME}
     ports:
-      - "3000:3000"
+      - "${APP_PORT:-3000}:3000"
     restart: unless-stopped
 
   db:
     image: postgres:16-alpine
+    env_file:
+      - .env
     environment:
-      POSTGRES_DB: previdencia
-      POSTGRES_USER: previdencia
-      POSTGRES_PASSWORD: previdencia
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
-      - "5432:5432"
+      - "${DATABASE_PORT:-5432}:5432"
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
@@ -54,13 +58,15 @@ services:
     image: grafana/grafana:11.2.2
     depends_on:
       - prometheus
+    env_file:
+      - .env
     environment:
-      GF_SECURITY_ADMIN_USER: admin
-      GF_SECURITY_ADMIN_PASSWORD: admin
-      GF_USERS_ALLOW_SIGN_UP: "false"
-      GF_SERVER_ROOT_URL: http://localhost:3001
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
+      GF_USERS_ALLOW_SIGN_UP: ${GRAFANA_ALLOW_SIGN_UP:-false}
+      GF_SERVER_ROOT_URL: ${GRAFANA_ROOT_URL:-http://localhost:3001}
     ports:
-      - "3001:3000"
+      - "${GRAFANA_PORT:-3001}:3000"
     volumes:
       - grafana-data:/var/lib/grafana
     restart: unless-stopped

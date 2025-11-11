@@ -76,14 +76,18 @@ API em NestJS voltada para gestão de saldos e solicitações de resgate de plan
    ```bash
   docker compose build
    ```
-2. Suba os serviços (API, PostgreSQL e monitoramento):
+2. Copie `env.sample` para `.env` e ajuste as credenciais desejadas antes de subir os contêineres:
+   ```bash
+   cp env.sample .env
+   ```
+3. Suba os serviços (API, PostgreSQL e monitoramento):
    ```bash
    docker compose up -d
    ```
-3. A API ficará disponível em `http://localhost:3000`. O banco utiliza as credenciais definidas em `docker-compose.yml` (`previdencia` / `previdencia`).
-4. Monitoramento:
+4. A API ficará disponível em `http://localhost:3000`. O banco utiliza as credenciais definidas no arquivo `.env`.
+5. Monitoramento:
    - Prometheus em `http://localhost:9090`
-   - Grafana em `http://localhost:3001` (login `admin` / `admin`)
+   - Grafana em `http://localhost:3001` (login conforme `GRAFANA_ADMIN_USER` / `GRAFANA_ADMIN_PASSWORD`)
    - Métricas da API em `http://localhost:3000/metrics`
 
 Para encerrar:
