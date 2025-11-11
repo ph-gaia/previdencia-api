@@ -57,7 +57,8 @@ export class WithdrawalPersistenceService implements WithdrawalPersistencePort {
         const remainingContributionBalance = round(
           Math.max(
             0,
-            toNumber(contribution.amount) - toNumber(contribution.redeemedAmount),
+            toNumber(contribution.amount) -
+              toNumber(contribution.redeemedAmount),
           ),
         );
 
@@ -128,4 +129,3 @@ function toNumber(value: unknown): number {
 function round(value: number): number {
   return Number(value.toFixed(2));
 }
-

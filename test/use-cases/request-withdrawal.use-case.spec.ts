@@ -13,6 +13,7 @@ import {
   WithdrawalPersistenceInput,
   WithdrawalPersistencePort,
 } from '../../src/application/services/withdrawal-persistence.port';
+import { MetricsService } from '../../src/infrastructure/monitoring/metrics.service';
 
 class InMemoryUserRepository implements UserRepository {
   private users = new Map<string, User>();
@@ -97,18 +98,25 @@ describe('RequestWithdrawalUseCase', () => {
   let contributionRepository: InMemoryContributionRepository;
   let withdrawalPersistence: FakeWithdrawalPersistence;
   let useCase: RequestWithdrawalUseCase;
+  let metricsService: MetricsService;
 
   beforeEach(() => {
     userRepository = new InMemoryUserRepository();
     contributionRepository = new InMemoryContributionRepository();
     withdrawalPersistence = new FakeWithdrawalPersistence();
+    metricsService = new MetricsService();
     useCase = new RequestWithdrawalUseCase(
       userRepository,
       contributionRepository,
       undefined,
       undefined,
+      metricsService,
       withdrawalPersistence,
     );
+  });
+
+  afterEach(() => {
+    metricsService.shutdown();
   });
 
   it('aprova um resgate parcial e retorna saldo restante', async () => {
@@ -215,6 +223,7 @@ describe('RequestWithdrawalUseCase', () => {
       mismatchingContributionRepository,
       undefined,
       undefined,
+      metricsService,
       withdrawalPersistence,
     );
 

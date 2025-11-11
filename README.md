@@ -11,6 +11,7 @@ API em NestJS voltada para gestão de saldos e solicitações de resgate de plan
 
 - Node.js 20 + NestJS 11
 - PostgreSQL 16
+- Prometheus + Grafana (monitoramento)
 - TypeScript, ESLint (PSR-like), Prettier
 - Docker e Docker Compose para orquestração local
 
@@ -75,11 +76,15 @@ API em NestJS voltada para gestão de saldos e solicitações de resgate de plan
    ```bash
   docker compose build
    ```
-2. Suba os serviços (API + PostgreSQL):
+2. Suba os serviços (API, PostgreSQL e monitoramento):
    ```bash
    docker compose up -d
    ```
 3. A API ficará disponível em `http://localhost:3000`. O banco utiliza as credenciais definidas em `docker-compose.yml` (`previdencia` / `previdencia`).
+4. Monitoramento:
+   - Prometheus em `http://localhost:9090`
+   - Grafana em `http://localhost:3001` (login `admin` / `admin`)
+   - Métricas da API em `http://localhost:3000/metrics`
 
 Para encerrar:
 ```bash
@@ -111,6 +116,12 @@ docker compose down
   ```bash
   npm run test:cov
   ```
+
+## Monitoramento
+
+- A API expõe métricas Prometheus em `/metrics`, com contadores para leituras de saldo (`success`/`error`) e solicitações de resgate (`success`/`error`).
+- No Grafana (rodando via docker compose), configure uma fonte de dados Prometheus apontando para `http://prometheus:9090`.
+- Para um dashboard inicial, importe o painel oficial **Prometheus Stats (ID 3662)** ou crie visualizações personalizadas a partir das métricas `previdencia_balance_reads_total` e `previdencia_withdrawal_requests_total`.
 
 ## Próximos passos
 
@@ -167,5 +178,17 @@ docker compose down
 4. O serviço de persistência atualiza `redeemed_amount` nos aportes, grava `withdrawals` + `withdrawal_items`, e publica `WithdrawalProcessedEvent`.
 5. O evento aciona o `UserBalanceProjector`, que recalcula `user_balances`, garantindo que futuras consultas reflitam o resgate.
 6. O use case responde ao chatbot com o valor aprovado e saldo disponível remanescente.
+
+---
+
+## Seeds para testes manuais
+
+Execute o seed padrão (dois usuários com aportes, carências, resgates e projeções já calculadas):
+
+```bash
+npm run seed:dev
+```
+
+O script usa a mesma conexão configurada no `AppDataSource`. Ajuste as variáveis de ambiente antes de executar.
 
 ---

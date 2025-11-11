@@ -3,6 +3,7 @@ import { CqrsModule } from '@nestjs/cqrs';
 import { DataSource } from 'typeorm';
 import { BalanceController } from './presentation/controllers/balance.controller';
 import { WithdrawalController } from './presentation/controllers/withdrawal.controller';
+import { MetricsController } from './presentation/controllers/metrics.controller';
 import { initializeDataSource } from './infrastructure/database/data-source';
 import { UserTypeOrmRepository } from './infrastructure/repositories/user.typeorm.repository';
 import { ContributionTypeOrmRepository } from './infrastructure/repositories/contribution.typeorm.repository';
@@ -32,6 +33,7 @@ import {
   WithdrawalPersistencePort,
 } from './application/services/withdrawal-persistence.port';
 import { WithdrawalPersistenceService } from './infrastructure/services/withdrawal-persistence.service';
+import { MetricsService } from './infrastructure/monitoring/metrics.service';
 
 const CQRS_COMMAND_HANDLERS: Provider[] = [RecalculateUserBalanceHandler];
 const CQRS_EVENT_HANDLERS: Provider[] = [
@@ -41,7 +43,7 @@ const CQRS_EVENT_HANDLERS: Provider[] = [
 
 @Module({
   imports: [CqrsModule],
-  controllers: [BalanceController, WithdrawalController],
+  controllers: [BalanceController, WithdrawalController, MetricsController],
   providers: [
     {
       provide: DataSource,
@@ -68,6 +70,7 @@ const CQRS_EVENT_HANDLERS: Provider[] = [
       useExisting: WithdrawalPersistenceService,
     },
     BalanceCalculatorService,
+    MetricsService,
     {
       provide: WithdrawalValidatorService,
       useFactory: (
@@ -83,18 +86,21 @@ const CQRS_EVENT_HANDLERS: Provider[] = [
         contributionRepository: ContributionRepository,
         balanceCalculator: BalanceCalculatorService,
         userBalanceProjectionRepository: UserBalanceProjectionRepository,
+        metricsService: MetricsService,
       ): GetBalanceUseCase =>
         new GetBalanceUseCase(
           userRepository,
           contributionRepository,
           balanceCalculator,
           userBalanceProjectionRepository,
+          metricsService,
         ),
       inject: [
         USER_REPOSITORY,
         CONTRIBUTION_REPOSITORY,
         BalanceCalculatorService,
         USER_BALANCE_PROJECTION_REPOSITORY,
+        MetricsService,
       ] as const,
     },
     {
@@ -104,6 +110,7 @@ const CQRS_EVENT_HANDLERS: Provider[] = [
         contributionRepository: ContributionRepository,
         withdrawalValidator: WithdrawalValidatorService,
         balanceCalculator: BalanceCalculatorService,
+        metricsService: MetricsService,
         withdrawalPersistence: WithdrawalPersistencePort,
       ): RequestWithdrawalUseCase =>
         new RequestWithdrawalUseCase(
@@ -111,6 +118,7 @@ const CQRS_EVENT_HANDLERS: Provider[] = [
           contributionRepository,
           withdrawalValidator,
           balanceCalculator,
+          metricsService,
           withdrawalPersistence,
         ),
       inject: [
@@ -118,6 +126,7 @@ const CQRS_EVENT_HANDLERS: Provider[] = [
         CONTRIBUTION_REPOSITORY,
         WithdrawalValidatorService,
         BalanceCalculatorService,
+        MetricsService,
         WITHDRAWAL_PERSISTENCE,
       ] as const,
     },

@@ -10,6 +10,7 @@ import {
   UserBalanceProjectionRepository,
   UserBalanceProjection,
 } from '../../domain/repositories/user-balance-projection.repository';
+import { MetricsService } from '../../infrastructure/monitoring/metrics.service';
 
 export class GetBalanceUseCase
   implements IUseCase<GetBalanceInputDto, GetBalanceOutputDto>
@@ -19,58 +20,67 @@ export class GetBalanceUseCase
     private readonly contributionRepository: ContributionRepository,
     private readonly balanceCalculator: BalanceCalculatorService,
     private readonly balanceProjectionRepository: UserBalanceProjectionRepository,
+    private readonly metricsService: MetricsService,
   ) {}
 
   async execute(input: GetBalanceInputDto): Promise<GetBalanceOutputDto> {
+    let status: 'success' | 'error' = 'success';
     this.ensureUserId(input.userId);
 
-    const user = await this.userRepository.findById(input.userId);
-    if (!user) {
-      throw new Error('User not found');
-    }
-
-    const referenceDate = this.parseReferenceDate(input.referenceDate);
-    const shouldUseProjection = !input.referenceDate;
-
-    if (shouldUseProjection) {
-      const projection = await this.tryGetProjection(user.getId());
-      if (projection) {
-        return {
-          userId: projection.userId,
-          total: projection.totalAmount,
-          available: projection.availableAmount,
-        };
+    try {
+      const user = await this.userRepository.findById(input.userId);
+      if (!user) {
+        throw new Error('User not found');
       }
+
+      const referenceDate = this.parseReferenceDate(input.referenceDate);
+      const shouldUseProjection = !input.referenceDate;
+
+      if (shouldUseProjection) {
+        const projection = await this.tryGetProjection(user.getId());
+        if (projection) {
+          return {
+            userId: projection.userId,
+            total: projection.totalAmount,
+            available: projection.availableAmount,
+          };
+        }
+      }
+
+      const contributions = await this.contributionRepository.findByUserId(
+        user.getId(),
+      );
+      const balanceSummary = this.balanceCalculator.calculateSummary(
+        contributions,
+        referenceDate,
+      );
+
+      const response = {
+        userId: user.getId(),
+        total: balanceSummary.total.amount,
+        available: balanceSummary.available.amount,
+      };
+
+      if (shouldUseProjection) {
+        await this.balanceProjectionRepository.upsert({
+          userId: response.userId,
+          totalAmount: response.total,
+          availableAmount: response.available,
+          lockedAmount: Math.max(
+            0,
+            Number((response.total - response.available).toFixed(2)),
+          ),
+          calculatedAt: new Date(),
+        });
+      }
+
+      return response;
+    } catch (error) {
+      status = 'error';
+      throw error;
+    } finally {
+      this.metricsService.observeBalanceRead(status);
     }
-
-    const contributions = await this.contributionRepository.findByUserId(
-      user.getId(),
-    );
-    const balanceSummary = this.balanceCalculator.calculateSummary(
-      contributions,
-      referenceDate,
-    );
-
-    const response = {
-      userId: user.getId(),
-      total: balanceSummary.total.amount,
-      available: balanceSummary.available.amount,
-    };
-
-    if (shouldUseProjection) {
-      await this.balanceProjectionRepository.upsert({
-        userId: response.userId,
-        totalAmount: response.total,
-        availableAmount: response.available,
-        lockedAmount: Math.max(
-          0,
-          Number((response.total - response.available).toFixed(2)),
-        ),
-        calculatedAt: new Date(),
-      });
-    }
-
-    return response;
   }
 
   private ensureUserId(userId: string): void {

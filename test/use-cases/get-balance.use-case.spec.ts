@@ -10,6 +10,7 @@ import { Contribution } from '../../src/domain/entities/contribution.entity';
 import { Money } from '../../src/domain/value-objects/money.vo';
 import { CarencyDate } from '../../src/domain/value-objects/carency-date.vo';
 import { BalanceCalculatorService } from '../../src/domain/services/balance-calculator.service';
+import { MetricsService } from '../../src/infrastructure/monitoring/metrics.service';
 
 class InMemoryUserRepository implements UserRepository {
   private users = new Map<string, User>();
@@ -100,17 +101,24 @@ describe('GetBalanceUseCase', () => {
   let contributionRepository: InMemoryContributionRepository;
   let balanceProjectionRepository: InMemoryUserBalanceProjectionRepository;
   let useCase: GetBalanceUseCase;
+  let metricsService: MetricsService;
 
   beforeEach(() => {
     userRepository = new InMemoryUserRepository();
     contributionRepository = new InMemoryContributionRepository();
     balanceProjectionRepository = new InMemoryUserBalanceProjectionRepository();
+    metricsService = new MetricsService();
     useCase = new GetBalanceUseCase(
       userRepository,
       contributionRepository,
       new BalanceCalculatorService(),
       balanceProjectionRepository,
+      metricsService,
     );
+  });
+
+  afterEach(() => {
+    metricsService.shutdown();
   });
 
   it('retorna o saldo total e disponível do usuário', async () => {

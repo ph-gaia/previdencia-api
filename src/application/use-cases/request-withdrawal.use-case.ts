@@ -12,6 +12,7 @@ import {
   WithdrawalPersistencePort,
   WithdrawalPersistenceInput,
 } from '../services/withdrawal-persistence.port';
+import { MetricsService } from '../../infrastructure/monitoring/metrics.service';
 
 export class RequestWithdrawalUseCase
   implements IUseCase<RequestWithdrawalInputDto, WithdrawalResponseDto>
@@ -21,65 +22,74 @@ export class RequestWithdrawalUseCase
     private readonly contributionRepository: ContributionRepository,
     private readonly withdrawalValidator: WithdrawalValidatorService = new WithdrawalValidatorService(),
     private readonly balanceCalculator: BalanceCalculatorService = new BalanceCalculatorService(),
+    private readonly metricsService: MetricsService,
     private readonly withdrawalPersistence?: WithdrawalPersistencePort,
   ) {}
 
   async execute(
     input: RequestWithdrawalInputDto,
   ): Promise<WithdrawalResponseDto> {
+    let status: 'success' | 'error' = 'success';
     this.ensureUserId(input.userId);
 
-    const user = await this.userRepository.findById(input.userId);
-    if (!user) {
-      throw new Error('User not found');
+    try {
+      const user = await this.userRepository.findById(input.userId);
+      if (!user) {
+        throw new Error('User not found');
+      }
+
+      const contributions = await this.contributionRepository.findByUserId(
+        user.getId(),
+      );
+      const requestedAt = this.parseDateOrNow(input.requestedAt, 'requestedAt');
+      const requestedAmount = this.toMoneyOrUndefined(input.requestedAmount);
+
+      const withdrawalRequest = new WithdrawalRequest({
+        id: input.requestId ?? this.generateRequestId(),
+        userId: user.getId(),
+        type: input.type,
+        requestedAmount,
+        requestedAt,
+        notes: input.notes,
+      });
+
+      const approvedAmount = this.withdrawalValidator.validate(
+        withdrawalRequest,
+        contributions,
+        requestedAt,
+      );
+      const balanceSummary = this.balanceCalculator.calculateSummary(
+        contributions,
+        requestedAt,
+      );
+      const availableAfterRequest =
+        balanceSummary.available.subtract(approvedAmount);
+
+      await this.persistWithdrawal({
+        withdrawalId: withdrawalRequest.getId(),
+        userId: withdrawalRequest.getUserId(),
+        type: withdrawalRequest.getType(),
+        approvedAmount: approvedAmount.amount,
+        requestedAmount: requestedAmount?.amount,
+        requestedAt,
+        notes: withdrawalRequest.getNotes(),
+      });
+
+      return {
+        requestId: withdrawalRequest.getId(),
+        userId: withdrawalRequest.getUserId(),
+        type: withdrawalRequest.getType(),
+        approvedAmount: approvedAmount.amount,
+        availableBalanceAfterRequest: availableAfterRequest.amount,
+        requestedAt: withdrawalRequest.getRequestedAt().toISOString(),
+        notes: withdrawalRequest.getNotes(),
+      };
+    } catch (error) {
+      status = 'error';
+      throw error;
+    } finally {
+      this.metricsService.observeWithdrawalRequest(status);
     }
-
-    const contributions = await this.contributionRepository.findByUserId(
-      user.getId(),
-    );
-    const requestedAt = this.parseDateOrNow(input.requestedAt, 'requestedAt');
-    const requestedAmount = this.toMoneyOrUndefined(input.requestedAmount);
-
-    const withdrawalRequest = new WithdrawalRequest({
-      id: input.requestId ?? this.generateRequestId(),
-      userId: user.getId(),
-      type: input.type,
-      requestedAmount,
-      requestedAt,
-      notes: input.notes,
-    });
-
-    const approvedAmount = this.withdrawalValidator.validate(
-      withdrawalRequest,
-      contributions,
-      requestedAt,
-    );
-    const balanceSummary = this.balanceCalculator.calculateSummary(
-      contributions,
-      requestedAt,
-    );
-    const availableAfterRequest =
-      balanceSummary.available.subtract(approvedAmount);
-
-    await this.persistWithdrawal({
-      withdrawalId: withdrawalRequest.getId(),
-      userId: withdrawalRequest.getUserId(),
-      type: withdrawalRequest.getType(),
-      approvedAmount: approvedAmount.amount,
-      requestedAmount: requestedAmount?.amount,
-      requestedAt,
-      notes: withdrawalRequest.getNotes(),
-    });
-
-    return {
-      requestId: withdrawalRequest.getId(),
-      userId: withdrawalRequest.getUserId(),
-      type: withdrawalRequest.getType(),
-      approvedAmount: approvedAmount.amount,
-      availableBalanceAfterRequest: availableAfterRequest.amount,
-      requestedAt: withdrawalRequest.getRequestedAt().toISOString(),
-      notes: withdrawalRequest.getNotes(),
-    };
   }
 
   private ensureUserId(userId: string): void {
