@@ -7,21 +7,27 @@ import { WithdrawalOrmEntity } from './entities/withdrawal.orm-entity';
 import { WithdrawalItemOrmEntity } from './entities/withdrawal-item.orm-entity';
 import { UserBalanceOrmEntity } from './entities/user-balance.orm-entity';
 
-const {
-  DB_HOST = 'localhost',
-  DB_PORT = '5432',
-  DB_USERNAME = 'previdencia',
-  DB_PASSWORD = 'previdencia',
-  DB_NAME = 'previdencia',
-} = process.env;
+function getRequiredEnv(key: string): string {
+  const value = process.env[key];
+  if (!value) {
+    throw new Error(`Environment variable ${key} must be defined`);
+  }
+  return value;
+}
+
+const DATABASE_HOST = getRequiredEnv('DATABASE_HOST');
+const DATABASE_PORT = Number(getRequiredEnv('DATABASE_PORT'));
+const DATABASE_USER = getRequiredEnv('DATABASE_USER');
+const DATABASE_PASSWORD = getRequiredEnv('DATABASE_PASSWORD');
+const DATABASE_NAME = getRequiredEnv('DATABASE_NAME');
 
 export const AppDataSource = new DataSource({
   type: 'postgres',
-  host: DB_HOST,
-  port: Number(DB_PORT),
-  username: DB_USERNAME,
-  password: DB_PASSWORD,
-  database: DB_NAME,
+  host: DATABASE_HOST,
+  port: DATABASE_PORT,
+  username: DATABASE_USER,
+  password: DATABASE_PASSWORD,
+  database: DATABASE_NAME,
   synchronize: false,
   logging: process.env.TYPEORM_LOGGING === 'true',
   entities: [

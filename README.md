@@ -34,7 +34,7 @@ A solução foi construída em TypeScript utilizando o framework NestJS para exp
 
 ### Modelagem atual
 
-- **Banco relacional**: tabelas `users`, `contributions`, `withdrawals`, `withdrawal_items`, `user_balances` e curvas de vesting.
+- **Banco relacional**: tabelas `users`, `contributions`, `withdrawals`, `withdrawal_items`, `user_balances` e `contribution_vestings`.
 - **Domínio**: entidades (`Contribution`, `WithdrawalRequest`, `User`), objetos de valor (`Money`, `CarencyDate`), serviços (`BalanceCalculatorService`, `WithdrawalValidatorService`) e exceções específicas.
 - **Infraestrutura**: repositórios TypeORM, serviço de persistência de resgates, projeção `UserBalanceProjector`.
 
