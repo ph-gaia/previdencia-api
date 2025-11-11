@@ -82,6 +82,7 @@ const createContribution = (
   amount: number,
   contributedAt: string,
   carencyDate?: string,
+  vestings?: Array<{ id: string; amount: number; releaseAt: string }>,
 ): Contribution =>
   new Contribution({
     id,
@@ -91,6 +92,11 @@ const createContribution = (
     carencyDate: carencyDate
       ? new CarencyDate(new Date(carencyDate))
       : undefined,
+    vestings: vestings?.map((vesting) => ({
+      id: vesting.id,
+      amount: new Money(vesting.amount),
+      releaseAt: new Date(vesting.releaseAt),
+    })),
   });
 
 describe('RequestWithdrawalUseCase', () => {

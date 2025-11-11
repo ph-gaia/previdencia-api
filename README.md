@@ -36,6 +36,7 @@ A solução foi construída em TypeScript utilizando o framework NestJS para exp
 
 - **Banco relacional**: tabelas `users`, `contributions`, `withdrawals`, `withdrawal_items`, `user_balances` e `contribution_vestings`.
 - **Domínio**: entidades (`Contribution`, `WithdrawalRequest`, `User`), objetos de valor (`Money`, `CarencyDate`), serviços (`BalanceCalculatorService`, `WithdrawalValidatorService`) e exceções específicas.
+- **Liberação parcial**: cada `Contribution` pode carregar curvas de vesting (`contribution_vestings`), permitindo cálculo do saldo disponível por lotes liberados ao longo do tempo.
 - **Infraestrutura**: repositórios TypeORM, serviço de persistência de resgates, projeção `UserBalanceProjector`.
 
 ## Como isso funciona?

@@ -1,5 +1,9 @@
 import { CarencyDate } from '../value-objects/carency-date.vo';
 import { Money } from '../value-objects/money.vo';
+import {
+  ContributionVesting,
+  ContributionVestingProps,
+} from './contribution-vesting.entity';
 
 export interface ContributionProps {
   id: string;
@@ -8,6 +12,7 @@ export interface ContributionProps {
   contributedAt: Date;
   carencyDate?: CarencyDate;
   redeemedAmount?: Money;
+  vestings?: ContributionVesting[] | ContributionVestingProps[];
 }
 
 export class Contribution {
@@ -17,6 +22,7 @@ export class Contribution {
   private readonly contributedAt: Date;
   private readonly carencyDate?: CarencyDate;
   private readonly redeemedAmount: Money;
+  private readonly vestings: ContributionVesting[];
 
   constructor(props: ContributionProps) {
     this.assertValidId(props.id);
@@ -31,6 +37,7 @@ export class Contribution {
     this.contributedAt = new Date(props.contributedAt.getTime());
     this.carencyDate = props.carencyDate;
     this.redeemedAmount = props.redeemedAmount ?? Money.zero();
+    this.vestings = this.normalizeVestings(props.vestings);
   }
 
   getId(): string {
@@ -74,11 +81,48 @@ export class Contribution {
   }
 
   getAvailableAmount(referenceDate: Date = new Date()): Money {
-    if (this.isAvailable(referenceDate)) {
-      return this.getRemainingBalance();
+    const remainingBalance = this.getRemainingBalance();
+
+    if (remainingBalance.isZero()) {
+      return Money.zero();
     }
 
-    return Money.zero();
+    if (this.isAvailable(referenceDate)) {
+      return remainingBalance;
+    }
+
+    const unlockedByVestings = this.vestings
+      .filter((vesting) => vesting.hasMatured(referenceDate))
+      .reduce((total, vesting) => total.add(vesting.getAmount()), Money.zero());
+
+    if (unlockedByVestings.isZero()) {
+      return Money.zero();
+    }
+
+    if (!unlockedByVestings.greaterThan(this.redeemedAmount)) {
+      return Money.zero();
+    }
+
+    const unlockedAfterRedemption = unlockedByVestings.subtract(
+      this.redeemedAmount,
+    );
+
+    if (unlockedAfterRedemption.greaterThan(remainingBalance)) {
+      return remainingBalance;
+    }
+
+    return unlockedAfterRedemption;
+  }
+
+  getVestings(): ContributionVesting[] {
+    return this.vestings.map(
+      (vesting) =>
+        new ContributionVesting({
+          id: vesting.getId(),
+          amount: new Money(vesting.getAmount().amount),
+          releaseAt: vesting.getReleaseDate(),
+        }),
+    );
   }
 
   private assertValidId(id: string, field: string = 'id'): void {
@@ -120,5 +164,23 @@ export class Contribution {
     if (redeemedAmount.greaterThan(amount)) {
       throw new Error('Redeemed amount cannot exceed contribution amount');
     }
+  }
+
+  private normalizeVestings(
+    vestings: ContributionVesting[] | ContributionVestingProps[] | undefined,
+  ): ContributionVesting[] {
+    if (!vestings || vestings.length === 0) {
+      return [];
+    }
+
+    return vestings
+      .map((vesting) =>
+        vesting instanceof ContributionVesting
+          ? vesting
+          : new ContributionVesting(vesting as ContributionVestingProps),
+      )
+      .sort(
+        (a, b) => a.getReleaseDate().getTime() - b.getReleaseDate().getTime(),
+      );
   }
 }

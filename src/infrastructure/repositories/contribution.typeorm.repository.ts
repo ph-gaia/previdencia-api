@@ -21,6 +21,7 @@ export class ContributionTypeOrmRepository implements ContributionRepository {
   async findById(id: string): Promise<Contribution | null> {
     const contribution = await this.repository.findOne({
       where: { id },
+      relations: { vestings: true },
     });
 
     if (!contribution) {
@@ -33,6 +34,7 @@ export class ContributionTypeOrmRepository implements ContributionRepository {
   async findByUserId(userId: string): Promise<Contribution[]> {
     const contributions = await this.repository.find({
       where: { userId },
+      relations: { vestings: true },
       order: { contributedAt: 'ASC' },
     });
 

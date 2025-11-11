@@ -3,9 +3,26 @@ import { Money } from '../../domain/value-objects/money.vo';
 import { CarencyDate } from '../../domain/value-objects/carency-date.vo';
 import { ContributionOrmEntity } from '../database/entities/contribution.orm-entity';
 import { UserOrmEntity } from '../database/entities/user.orm-entity';
+import { ContributionVesting } from '../../domain/entities/contribution-vesting.entity';
 
 export class ContributionMapper {
   static toDomain(entity: ContributionOrmEntity): Contribution {
+    const vestings =
+      entity.vestings?.map(
+        (vesting) =>
+          new ContributionVesting({
+            id: vesting.id,
+            amount: new Money(
+              Number(
+                vesting.amount !== undefined && vesting.amount !== null
+                  ? vesting.amount
+                  : 0,
+              ),
+            ),
+            releaseAt: new Date(vesting.releaseAt.getTime()),
+          }),
+      ) ?? [];
+
     return new Contribution({
       id: entity.id,
       userId: entity.userId,
@@ -17,6 +34,7 @@ export class ContributionMapper {
       redeemedAmount: new Money(
         Number(entity.redeemedAmount !== undefined ? entity.redeemedAmount : 0),
       ),
+      vestings,
     });
   }
 

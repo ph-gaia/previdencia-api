@@ -15,6 +15,7 @@ const createContribution = ({
   contributedAt,
   carencyDate,
   redeemedAmount,
+  vestings,
 }: {
   id: string;
   userId: string;
@@ -22,6 +23,7 @@ const createContribution = ({
   contributedAt: string;
   carencyDate?: string;
   redeemedAmount?: number;
+  vestings?: Array<{ id: string; amount: number; releaseAt: string }>;
 }): Contribution =>
   new Contribution({
     id,
@@ -33,6 +35,11 @@ const createContribution = ({
       : undefined,
     redeemedAmount:
       redeemedAmount !== undefined ? new Money(redeemedAmount) : undefined,
+    vestings: vestings?.map((vesting) => ({
+      id: vesting.id,
+      amount: new Money(vesting.amount),
+      releaseAt: new Date(vesting.releaseAt),
+    })),
   });
 
 const createWithdrawalRequest = ({
@@ -69,6 +76,11 @@ describe('WithdrawalValidatorService', () => {
       amount: 200,
       contributedAt: '2023-01-01T00:00:00.000Z',
       redeemedAmount: 50,
+      carencyDate: '2024-12-01T00:00:00.000Z',
+      vestings: [
+        { id: 'v1', amount: 80, releaseAt: '2023-06-01T00:00:00.000Z' },
+        { id: 'v2', amount: 70, releaseAt: '2024-12-01T00:00:00.000Z' },
+      ],
     }),
     createContribution({
       id: 'c2',
@@ -94,7 +106,7 @@ describe('WithdrawalValidatorService', () => {
     });
 
     const amount = service.validate(request, baseContributions, referenceDate);
-    expect(amount.amount).toBe(250);
+    expect(amount.amount).toBe(130);
   });
 
   it('retorna o valor solicitado para resgates parciais válidos', () => {
