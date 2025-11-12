@@ -81,7 +81,9 @@ export class User {
     const sanitized = phoneNumber.replace(/[^\d+]/g, '');
     const e164Pattern = /^\+?[1-9]\d{7,14}$/;
     if (!e164Pattern.test(sanitized)) {
-      throw new Error('User phoneNumber must be a valid international phone number');
+      throw new Error(
+        'User phoneNumber must be a valid international phone number',
+      );
     }
 
     return sanitized.startsWith('+') ? sanitized : `+${sanitized}`;
