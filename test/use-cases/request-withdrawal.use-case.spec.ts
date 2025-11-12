@@ -73,6 +73,7 @@ const createUser = (id: string): User =>
     id,
     fullName: 'Jane Doe',
     document: '98765432100',
+    phoneNumber: '1234567890',
     birthDate: new Date('1990-05-01T00:00:00.000Z'),
   });
 

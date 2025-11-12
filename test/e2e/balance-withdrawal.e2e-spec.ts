@@ -197,6 +197,7 @@ describe('Saldo e Resgate (e2e)', () => {
     user.document = `99999999${Math.floor(Math.random() * 1000)
       .toString()
       .padStart(3, '0')}`;
+    user.phoneNumber = '+5511999999999';
     user.birthDate = new Date('1990-01-01T00:00:00.000Z');
     await userRepo.save(user);
 
