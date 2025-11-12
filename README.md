@@ -26,10 +26,6 @@ A solução foi construída em TypeScript utilizando o framework NestJS para exp
 
 ## Arquitetura
 
-<p align="center">
-  <img src="docs/application-diagram.png">
-</p>
-
 - **Camada de domínio (`src/domain`)**: concentra regras de negócio puras e independentes de frameworks.
 - **Camada de aplicação (`src/application`)**: orquestra casos de uso, serviços e eventos (CQRS).
 - **Camada de infraestrutura (`src/infrastructure`)**: implementa adapters (TypeORM, persistência de resgates, monitoramento).
