@@ -26,6 +26,10 @@ A solução foi construída em TypeScript utilizando o framework NestJS para exp
 
 ## Arquitetura
 
+<p align="center">
+  <img src="docs/application-diagram.png">
+</p>
+
 - **Camada de domínio (`src/domain`)**: concentra regras de negócio puras e independentes de frameworks.
 - **Camada de aplicação (`src/application`)**: orquestra casos de uso, serviços e eventos (CQRS).
 - **Camada de infraestrutura (`src/infrastructure`)**: implementa adapters (TypeORM, persistência de resgates, monitoramento).
@@ -38,6 +42,10 @@ A solução foi construída em TypeScript utilizando o framework NestJS para exp
 - **Domínio**: entidades (`Contribution`, `WithdrawalRequest`, `User`), objetos de valor (`Money`, `CarencyDate`), serviços (`BalanceCalculatorService`, `WithdrawalValidatorService`) e exceções específicas.
 - **Liberação parcial**: cada `Contribution` pode carregar curvas de vesting (`contribution_vestings`), permitindo cálculo do saldo disponível por lotes liberados ao longo do tempo.
 - **Infraestrutura**: repositórios TypeORM, serviço de persistência de resgates, projeção `UserBalanceProjector`.
+
+<p align="center">
+  <img src="docs/ME-diagram.png">
+</p>
 
 ## Como isso funciona?
 
