@@ -45,6 +45,7 @@ export interface SeedUser {
   id: string;
   fullName: string;
   document: string;
+  phoneNumber: string;
   birthDate: Date;
 }
 
@@ -74,6 +75,7 @@ export async function runSeed(
       entity.id = user.id;
       entity.fullName = user.fullName;
       entity.document = user.document;
+      entity.phoneNumber = user.phoneNumber;
       entity.birthDate = user.birthDate;
       return entity;
     });
@@ -182,12 +184,14 @@ function defaultSeedData(): SeedData {
     id: randomUUID(),
     fullName: 'Alice Rodrigues',
     document: '11122233344',
+    phoneNumber: '+5511999991111',
     birthDate: new Date('1988-02-15T00:00:00.000Z'),
   };
   const user2 = {
     id: randomUUID(),
     fullName: 'Bruno Martins',
     document: '55566677788',
+    phoneNumber: '+5511988882222',
     birthDate: new Date('1992-07-20T00:00:00.000Z'),
   };
 

@@ -11,6 +11,7 @@ export class CreatePrevidenciaTables1700000000000
         id uuid PRIMARY KEY,
         full_name varchar(255) NOT NULL,
         document varchar(20) NOT NULL UNIQUE,
+        phone_number varchar(20) NOT NULL UNIQUE,
         birth_date date NOT NULL,
         created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
         updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()

@@ -22,6 +22,9 @@ export class UserOrmEntity {
   @Column({ type: 'varchar', length: 20, unique: true })
   document!: string;
 
+  @Column({ name: 'phone_number', type: 'varchar', length: 20, unique: true })
+  phoneNumber!: string;
+
   @Column({ name: 'birth_date', type: 'date' })
   birthDate!: Date;
 

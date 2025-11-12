@@ -14,6 +14,7 @@ export class UserMapper {
         id: entity.id,
         fullName: entity.fullName,
         document: entity.document,
+        phoneNumber: entity.phoneNumber,
         birthDate: new Date(entity.birthDate),
       },
       contributions,
@@ -25,6 +26,7 @@ export class UserMapper {
     user.id = entity.getId();
     user.fullName = entity.getFullName();
     user.document = entity.getDocument();
+    user.phoneNumber = entity.getPhoneNumber();
     user.birthDate = entity.getBirthDate();
     user.contributions = entity
       .getContributions()
